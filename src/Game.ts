@@ -21,18 +21,7 @@ export default class Game {
         const gravity = new Vector3(0.0, -9.81, 0.0)
         this.world = new World(gravity)
 
-        // floor
-        const floorMesh = new Mesh(
-            new CylinderGeometry( 15, 15, 0.1, 8, 1, false, 0),
-            new MeshStandardMaterial()
-        )
-        floorMesh.receiveShadow = true
-        floorMesh.position.y = -1
-        this.scene.add(floorMesh)
-        const staticFloorBody  = this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -1, 0))
-        const floorColliderShape = RAPIER.ColliderDesc.cylinder(0.1, 15)
-        this.world.createCollider(floorColliderShape, staticFloorBody )
-        // end floor
+        this.createFloor()
 
         const cubeMesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshNormalMaterial())
         cubeMesh.castShadow = true
@@ -48,6 +37,19 @@ export default class Game {
         document.addEventListener('keyup', (event: KeyboardEvent) => {
             this.handleKeyUp(event)
         })
+    }
+
+    createFloor() {
+        const floorMesh = new Mesh(
+            new CylinderGeometry( 15, 15, 0.1, 8, 1, false, 0),
+            new MeshStandardMaterial()
+        )
+        floorMesh.receiveShadow = true
+        floorMesh.position.y = -1
+        this.scene.add(floorMesh)
+        const staticFloorBody  = this.world?.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -1, 0))
+        const floorColliderShape = RAPIER.ColliderDesc.cylinder(0.1, 15)
+        this.world?.createCollider(floorColliderShape, staticFloorBody )
     }
 
     update() {
