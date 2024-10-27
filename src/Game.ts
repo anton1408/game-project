@@ -36,6 +36,7 @@ export default class Game {
         this.eventQueue = new EventQueue(true)
 
         this.rapierDebugRenderer = new RapierDebugRenderer(this.scene, this.world)
+        this.rapierDebugRenderer.enabled = false
         this.gui.add(this.rapierDebugRenderer, 'enabled').name('Rapier Debug Renderer')
 
         // start platform
@@ -51,7 +52,7 @@ export default class Game {
         new Platform(this.scene, this.world, [5, 0.2, 5], [-3, 4, -8])
 
 
-        const position = [0, -1, 0]
+        const position:[number, number, number] = [0, -1, 0]
         this.player = new Player(this.scene, this.camera, this.renderer, this.world, position, this.gui)
         await this.player.init()
 

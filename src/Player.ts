@@ -177,9 +177,9 @@ export default class Player {
         this.inputVelocity.applyQuaternion(this.quaternion)
 
         this.characterBody?.applyImpulse(this.inputVelocity, true)
-        if (this.characterBody?.translation().y < -10) this.playerRestart()
+        if (this.characterBody && this.characterBody.translation().y < -10) this.playerRestart()
 
-        this.followTarget.position.copy(this.characterBody?.translation())
+        if(this.characterBody) this.followTarget.position.copy(this.characterBody.translation())
         this.followTarget.getWorldPosition(this.vector)
         this.followCam.pivot.position.lerp(this.vector, delta * 10)
 

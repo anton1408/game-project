@@ -1,4 +1,4 @@
-import './assets/style.css'
+import './style.css'
 import {Scene, PerspectiveCamera, WebGLRenderer, Clock} from 'three'
 import Stats from 'three/addons/libs/stats.module.js'
 import {GUI} from 'three/examples/jsm/libs/lil-gui.module.min.js'
@@ -7,7 +7,7 @@ import Game from './Game.ts'
 const scene = new Scene()
 
 const camera = new PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000)
-camera.position.set(0, 0, 10)
+camera.position.set(0, 1, 5)
 
 const renderer = new WebGLRenderer()
 renderer.setSize(window.innerWidth, window.innerHeight)
