@@ -104,8 +104,7 @@ export default class Player {
 
             !actionAssigned && this.setAction(this.animationActions['stand'])
         }
-        // update сharacter movement animation
-        // https://threejs.org/docs/index.html#api/en/animation/AnimationMixer
+
         this.characterModel?.update(delta)
     }
 
