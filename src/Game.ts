@@ -1,111 +1,75 @@
-import {PerspectiveCamera, Scene, WebGLRenderer, Vector3, Object3D, Mesh, CylinderGeometry, MeshStandardMaterial, BoxGeometry, MeshNormalMaterial} from 'three'
-// import RAPIER, { World, EventQueue, RigidBodyDesc, ColliderDesc } from '@dimforge/rapier3d-compat'
-import RAPIER, { World } from '@dimforge/rapier3d-compat'
+import {
+    PerspectiveCamera,
+    Scene,
+    WebGLRenderer,
+    Vector3,
+} from 'three'
+import RAPIER, { World, EventQueue } from '@dimforge/rapier3d-compat'
+import {GUI} from 'three/examples/jsm/libs/lil-gui.module.min.js'
+import Environment from './Environment.ts'
+import RapierDebugRenderer from './RapierDebugRenderer'
+import Player from './Player.ts'
+import Platform from './Platform'
 
 export default class Game {
     scene: Scene
     camera: PerspectiveCamera
     renderer: WebGLRenderer
+    gui: GUI
     world?: World
-    dynamicBodies: [Object3D, RAPIER.RigidBody][] = []
-    moveDirection: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
+    rapierDebugRenderer?: RapierDebugRenderer
+    eventQueue?: EventQueue
 
-    constructor(scene: Scene, camera: PerspectiveCamera, renderer: WebGLRenderer) {
+    player?: Player
+
+    constructor(scene: Scene, camera: PerspectiveCamera, renderer: WebGLRenderer, gui: GUI) {
         this.scene = scene
         this.camera = camera
         this.renderer = renderer
+        this.gui = gui
     }
 
     async init() {
         await RAPIER.init() // This line is only needed if using the compat version
         const gravity = new Vector3(0.0, -9.81, 0.0)
         this.world = new World(gravity)
+        this.eventQueue = new EventQueue(true)
 
-        this.createFloor()
+        this.rapierDebugRenderer = new RapierDebugRenderer(this.scene, this.world)
+        this.gui.add(this.rapierDebugRenderer, 'enabled').name('Rapier Debug Renderer')
 
-        const cubeMesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshNormalMaterial())
-        cubeMesh.castShadow = true
-        this.scene.add(cubeMesh)
-        const cubeBody = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0, 5, 0).setCanSleep(false))
-        const cubeShape = RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5).setMass(10).setRestitution(1)
-        this.world.createCollider(cubeShape, cubeBody)
-        this.dynamicBodies.push([cubeMesh, cubeBody])
+        // start platform
+        new Platform(this.scene, this.world, [10, 0.2, 10], [0, -0.5, 0])
 
-        document.addEventListener('keydown', (event: KeyboardEvent) => {
-            this.handleKeyDown(event)
-        })
-        document.addEventListener('keyup', (event: KeyboardEvent) => {
-            this.handleKeyUp(event)
-        })
+        new Platform(this.scene, this.world, [2, 0.1, 4], [-2, 0, 10])
+        new Platform(this.scene, this.world, [4, 0.1, 2], [4, 0, 10])
+        new Platform(this.scene, this.world, [2, 0.1, 2], [8, 1, 11.5])
+        new Platform(this.scene, this.world, [0.3, 0.1, 10], [8, 1, 1])
+        new Platform(this.scene, this.world, [2, 0.1, 2], [8, 2, -8])
+        new Platform(this.scene, this.world, [4, 0.1, 2], [3, 3, -8])
+        new Platform(this.scene, this.world, [4, 0.1, 2], [-3, 4, -8])
+        new Platform(this.scene, this.world, [5, 0.2, 5], [-3, 4, -8])
+
+
+        const position = [0, -1, 0]
+        this.player = new Player(this.scene, this.camera, this.renderer, this.world, position, this.gui)
+        await this.player.init()
+
+        const environment = new Environment(this.scene, this.gui)
+        await environment.init()
+        environment.light.target = this.player.followTarget
     }
 
-    createFloor() {
-        const floorMesh = new Mesh(
-            new CylinderGeometry( 15, 15, 0.1, 8, 1, false, 0),
-            new MeshStandardMaterial()
-        )
-        floorMesh.receiveShadow = true
-        floorMesh.position.y = -1
-        this.scene.add(floorMesh)
-        const staticFloorBody  = this.world?.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -1, 0))
-        const floorColliderShape = RAPIER.ColliderDesc.cylinder(0.1, 15)
-        this.world?.createCollider(floorColliderShape, staticFloorBody )
-    }
-
-    update() {
-        if (this.world) {
-            this.world.step()
-            for (let i = 0, n = this.dynamicBodies.length; i < n; i++) {
-                const [mesh, body] = this.dynamicBodies[i]
-                mesh.position.copy(body.translation())
-                mesh.quaternion.copy(body.rotation())
-
-                // Update position based on movement direction
-                body.setTranslation(new RAPIER.Vector3(
-                    body.translation().x + this.moveDirection.x,
-                    body.translation().y + this.moveDirection.y,
-                    body.translation().z + this.moveDirection.z
-                ), true)
+    update(delta: number): void {
+        // ;(this.world as World).timestep = Math.min(delta, 0.1)
+        this.world?.step(this.eventQueue)
+        this.eventQueue?.drainCollisionEvents((_, __, started) => {
+            if (started) {
+                this.player?.setGrounded()
             }
-        }
+        })
+        this.player?.update(delta)
+        this.rapierDebugRenderer?.update()
     }
 
-    handleKeyDown(event: KeyboardEvent) {
-        console.log('event.code', event.code)
-        switch (event.code) {
-            case 'ArrowUp':
-            case 'KeyW':
-                this.moveDirection.z = -0.1;
-                break;
-            case 'ArrowDown':
-            case 'KeyS':
-                this.moveDirection.z = 0.1;
-                break;
-            case 'ArrowLeft':
-            case 'KeyA':
-                this.moveDirection.x = -0.1;
-                break;
-            case 'ArrowRight':
-            case 'KeyD':
-                this.moveDirection.x = 0.1;
-                break
-        }
-    }
-
-    handleKeyUp(event: KeyboardEvent) {
-        switch (event.code) {
-            case 'ArrowUp':
-            case 'KeyW':
-            case 'ArrowDown':
-            case 'KeyS':
-                this.moveDirection.z = 0;
-                break;
-            case 'ArrowLeft':
-            case 'KeyA':
-            case 'ArrowRight':
-            case 'KeyD':
-                this.moveDirection.x = 0;
-                break
-        }
-    }
 }
